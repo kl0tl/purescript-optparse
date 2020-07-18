@@ -98,7 +98,7 @@ import Data.Either (Either(..), either)
 import Data.Foldable (fold)
 import Data.Int as Int
 import Data.Maybe (Maybe(..), maybe)
-import Data.Newtype (class Newtype, over, un)
+import Data.Newtype (over)
 import Data.String (toLower)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
@@ -372,13 +372,12 @@ option r m = mkParser d g rdr
 
 -- | Modifier for 'ParserInfo'.
 newtype InfoMod a = InfoMod (ParserInfo a -> ParserInfo a)
-derive instance newtypeInfoMod :: Newtype (InfoMod a) _
 
 instance infoModMonoid :: Monoid (InfoMod a) where
   mempty = InfoMod identity
 
 instance infoModSemigroup :: Semigroup (InfoMod a) where
-  append m1 m2 = InfoMod $ un InfoMod m2 <<< un InfoMod m1
+  append (InfoMod m1) (InfoMod m2) = InfoMod $ m2 <<< m1
 
 -- | Show a full description in the help text of this parser (i.e.
 -- | options with the `hidden` modifier will still be displayed,
@@ -442,7 +441,7 @@ forwardOptions = InfoMod $ over ParserInfo \p -> p { infoPolicy = ForwardOptions
 
 -- | Create a 'ParserInfo' given a 'Parser' and a modifier.
 info :: forall a. Parser a -> InfoMod a -> ParserInfo a
-info parser m = un InfoMod m base
+info parser (InfoMod m) = m base
   where
     base = ParserInfo
       { infoParser: parser
@@ -454,13 +453,12 @@ info parser m = un InfoMod m base
       , infoPolicy: Intersperse }
 
 newtype PrefsMod = PrefsMod (ParserPrefs -> ParserPrefs)
-derive instance newtypePrefsMod :: Newtype PrefsMod _
 
 instance prefsModMonoid :: Monoid PrefsMod where
   mempty = PrefsMod identity
 
 instance prefsModSemigroup :: Semigroup PrefsMod where
-  append m1 m2 = PrefsMod $ un PrefsMod m2 <<< un PrefsMod m1
+  append (PrefsMod m1) (PrefsMod m2) = PrefsMod $ m2 <<< m1
 
 -- | Include a suffix to attach to the metavar when multiple values
 -- | can be entered.
@@ -504,7 +502,7 @@ columns cols = PrefsMod $ over ParserPrefs \p -> p { prefColumns = cols }
 
 -- | Create a `ParserPrefs` given a modifier
 prefs :: PrefsMod -> ParserPrefs
-prefs m = un PrefsMod m base
+prefs (PrefsMod m) = m base
   where
     base = ParserPrefs
       { prefMultiSuffix: ""
